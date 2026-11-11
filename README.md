@@ -1,7 +1,4 @@
-* ** Mis Datos **
-* 
-
-
+## Mis Datos 
   * Estudiante: Javier Osco Guachalla
   * Materia: Métodos Numéricos INF-373
   * Docente: Lic. Brígida Alejandra Carvajal Blanco
