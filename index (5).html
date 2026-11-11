@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reconstrucción arqueológica · Spline Cúbico Paramétrico</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+<header>
+  <h1>Reconstrucción arqueológica mediante Spline Cúbico Paramétrico Natural</h1>
+  <p>Métodos Numéricos · interpolación de perfiles de piezas sobre fotografías (longitud de cuerda + sistema tridiagonal)</p>
+</header>
+
+<main class="layout">
+  <!-- ===================== COLUMNA PRINCIPAL ===================== -->
+  <section class="card" style="min-width:0">
+    <div class="toolbar">
+      <label class="btn primary edit-only" id="fileLabel" for="fileInput">Cargar fotografía</label>
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+      <button class="btn edit-only" id="undoBtn" title="Eliminar el último punto (Supr / Ctrl+Z)">Eliminar último punto</button>
+      <button class="btn danger edit-only" id="clearBtn" title="Quitar todos los puntos">Limpiar puntos</button>
+      <span class="sep"></span>
+      <button class="btn" id="zoomOutBtn" title="Alejar">−</button>
+      <button class="btn" id="zoomInBtn" title="Acercar">+</button>
+      <button class="btn" id="zoomFitBtn" title="Ajustar la imagen al área">Ajustar</button>
+      <span class="small" id="zoomLbl">100%</span>
+    </div>
+    <div class="opts">
+      <label><input type="checkbox" id="optAux" checked> Líneas auxiliares</label>
+      <label><input type="checkbox" id="optSeg" checked> Colorear segmentos</label>
+      <label><input type="checkbox" id="optCoords"> Coordenadas sobre la imagen</label>
+      <label><input type="checkbox" id="optFill"> Rellenar perfil</label>
+      <label><input type="checkbox" id="optCompare"> Comparar antes/después</label>
+      <input type="range" id="comparePos" min="0" max="100" value="50" style="width:120px" title="Posición del divisor">
+    </div>
+
+    <div class="stage" id="stage">
+      <canvas id="cv"></canvas>
+      <div class="empty" id="emptyHint">
+        <b>Carga una fotografía de la pieza</b>
+        <span>Usa el botón “Cargar fotografía” o arrastra una imagen aquí.<br>Luego haz clic sobre el contorno para colocar los puntos de control (8 a 15 recomendado).</span>
+      </div>
+    </div>
+    <div class="statusbar">
+      <span id="coordReadout">Cursor: —</span>
+      <span id="countLbl">Puntos: 0</span>
+    </div>
+    <div class="hint">Clic: agregar punto · Arrastrar punto: moverlo · Clic derecho sobre un punto: borrarlo · Rueda: zoom · Shift + arrastrar (o botón central / Espacio): desplazar · Flechas: ajuste fino del punto seleccionado (Shift = 5 px).</div>
+    <div class="msg" id="msg" role="status" aria-live="polite"></div>
+
+    <div class="actions">
+      <button class="btn hot big" id="calcBtn">CALCULAR SPLINE</button>
+      <button class="btn ind big" id="animBtn">ANIMAR RECONSTRUCCIÓN</button>
+      <button class="btn big" id="pngBtn">Exportar PNG</button>
+      <button class="btn big" id="jsonBtn">Exportar JSON</button>
+    </div>
+
+    <div class="animbar">
+      <div class="animrow">
+        <button class="btn ind" id="playBtn">▶ Reproducir</button>
+        <button class="btn" id="pauseBtn" disabled>⏸ Pausar</button>
+        <button class="btn" id="resetBtn" disabled>⟲ Reiniciar</button>
+        <button class="btn" id="exitAnimBtn" disabled>Volver a edición</button>
+        <span class="sep"></span>
+        <label class="small" for="speedRange">Velocidad</label>
+        <input type="range" id="speedRange" min="0.25" max="3" step="0.25" value="1" style="width:130px">
+        <span class="small" id="speedLbl" style="min-width:36px">1.00×</span>
+      </div>
+      <div class="animrow">
+        <input type="range" class="scrub" id="scrub" min="0" max="1000" value="0" disabled>
+        <span class="small" id="timeLbl">0:00 / 0:00</span>
+      </div>
+      <div class="steps" id="steps"></div>
+    </div>
+  </section>
+
+  <!-- ===================== COLUMNA LATERAL ===================== -->
+  <aside class="side">
+    <div class="card">
+      <h2>Resumen del modelo</h2>
+      <div class="body">
+        <div class="kv">
+          <span>Estado</span><span id="sState"><span class="badge off">Sin calcular</span></span>
+          <span>Método</span><span>Spline cúbico paramétrico natural</span>
+          <span>Puntos de control</span><span id="sPoints">0</span>
+          <span>Intervalos / segmentos</span><span id="sSegs">—</span>
+          <span>Longitud de cuerda total</span><span id="sLen">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Puntos de control (px de la imagen original)</h2>
+      <div class="body">
+        <div class="scroll">
+          <table>
+            <thead><tr><th>#</th><th>X</th><th>Y</th><th>t (cuerda)</th></tr></thead>
+            <tbody id="ptsBody"><tr><td colspan="4" style="text-align:center;color:#94a3b8">Sin puntos</td></tr></tbody>
+          </table>
+        </div>
+        <p class="small" style="margin:8px 0 0">Origen en la esquina superior izquierda de la imagen original; Y crece hacia abajo. Las coordenadas no dependen del zoom ni del tamaño del canvas.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Verificación numérica</h2>
+      <div class="body">
+        <table class="verif">
+          <tbody id="verifBody"><tr><td style="color:#94a3b8">Calcula el spline para ver los errores.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- ===================== PANEL MATEMÁTICO ===================== -->
+<section class="math">
+  <div class="card">
+    <h2>Panel matemático</h2>
+    <div class="body">
+      <div class="grid">
+        <div>
+          <div class="kv">
+            <span>Método utilizado</span><span>Spline cúbico paramétrico natural</span>
+            <span>Parametrización</span><span>Longitud de cuerda</span>
+            <span>Cantidad de puntos de control (n+1)</span><span id="mPoints">0</span>
+            <span>Cantidad de intervalos (n)</span><span id="mIntervals">—</span>
+            <span>Solución del sistema</span><span>Algoritmo de Thomas</span>
+          </div>
+          <h3 style="font-size:.92rem;margin:16px 0 4px">Continuidad C⁰, C¹ y C²</h3>
+          <ul>
+            <li><b>C⁰</b>: los tramos se encuentran en el mismo punto: Xᵢ(tᵢ₊₁) = Xᵢ₊₁(tᵢ₊₁), igual para Y. La curva no tiene saltos.</li>
+            <li><b>C¹</b>: coinciden las primeras derivadas (la tangente): bᵢ + 2cᵢhᵢ + 3dᵢhᵢ² = bᵢ₊₁. No hay esquinas.</li>
+            <li><b>C²</b>: coinciden las segundas derivadas (la curvatura): 2cᵢ + 6dᵢhᵢ = 2cᵢ₊₁. La curva es suave.</li>
+            <li><b>Natural</b>: X″ = Y″ = 0 en los dos extremos (c₀ = cₙ = 0).</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="font-size:.92rem;margin:0 0 4px">Fórmulas utilizadas</h3>
+          <div class="formula">t₀ = 0 ,  tᵢ = tᵢ₋₁ + √[(xᵢ − xᵢ₋₁)² + (yᵢ − yᵢ₋₁)²] ,  hᵢ = tᵢ₊₁ − tᵢ</div>
+          <div class="formula">Xᵢ(t) = aₓ + bₓ(t − tᵢ) + cₓ(t − tᵢ)² + dₓ(t − tᵢ)³ ,  t ∈ [tᵢ, tᵢ₊₁]</div>
+          <div class="formula">Yᵢ(t) = aᵧ + bᵧ(t − tᵢ) + cᵧ(t − tᵢ)² + dᵧ(t − tᵢ)³ ,  i = 0, …, n−1</div>
+          <div class="formula">aᵢ = xᵢ (para X)   ·   aᵢ = yᵢ (para Y)</div>
+          <div class="formula">hᵢ₋₁cᵢ₋₁ + 2(hᵢ₋₁ + hᵢ)cᵢ + hᵢcᵢ₊₁ = 3[(aᵢ₊₁ − aᵢ)/hᵢ − (aᵢ − aᵢ₋₁)/hᵢ₋₁] ,  i = 1, …, n−1</div>
+          <div class="formula">c₀ = cₙ = 0   (frontera natural)</div>
+          <div class="formula">bᵢ = (aᵢ₊₁ − aᵢ)/hᵢ − hᵢ(2cᵢ + cᵢ₊₁)/3 ,   dᵢ = (cᵢ₊₁ − cᵢ)/(3hᵢ)</div>
+          <p class="small">El sistema tridiagonal (estrictamente diagonal dominante, por lo que tiene solución única) se resuelve por separado para X(t) e Y(t). La curva se dibuja evaluando los polinomios cúbicos de cada tramo en muchos valores de t; no se usan curvas Bézier ni aproximaciones.</p>
+        </div>
+      </div>
+      <h3 style="font-size:.92rem;margin:8px 0 6px">Coeficientes calculados por intervalo</h3>
+      <div class="scroll wide">
+        <table>
+          <thead>
+            <tr><th>i</th><th>[tᵢ , tᵢ₊₁]</th><th>hᵢ</th>
+              <th>aₓ</th><th>bₓ</th><th>cₓ</th><th>dₓ</th>
+              <th>aᵧ</th><th>bᵧ</th><th>cᵧ</th><th>dᵧ</th></tr>
+          </thead>
+          <tbody id="coefBody"><tr><td colspan="11" style="text-align:center;color:#94a3b8">Presiona “CALCULAR SPLINE” para obtener los coeficientes.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+<footer>Aplicación autónoma: HTML + CSS + JavaScript puro y Canvas 2D. Funciona sin conexión a Internet.</footer>
+
+<script src="matematica.js"></script>
+</body>
+</html>
