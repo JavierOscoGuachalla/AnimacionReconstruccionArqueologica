@@ -2,7 +2,7 @@
   * Estudiante: Javier Osco Guachalla
   * Materia: Métodos Numéricos INF-373
   * Docente: Lic. Brígida Alejandra Carvajal Blanco
-  * Enlace de la aplicacion web:
+  * Enlace de la aplicacion web: https://javieroscoguachalla.github.io/AnimacionReconstruccionArqueologica/
 
 # Reconstrucción Arqueológica mediante Spline Cúbico Paramétrico Natural
 
