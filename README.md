@@ -1,9 +1,13 @@
-# Reconstrucción Arqueológica mediante Spline Cúbico Paramétrico Natural
+* ** Mis Datos **
+* 
 
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
-![Licencia](https://img.shields.io/badge/Licencia-MIT-green.style=for-the-badge)
+
+  * Estudiante: Javier Osco Guachalla
+  * Materia: Métodos Numéricos INF-373
+  * Docente: Lic. Brígida Alejandra Carvajal Blanco
+  * Enlace de la aplicacion web:
+
+# Reconstrucción Arqueológica mediante Spline Cúbico Paramétrico Natural
 
 Aplicación web interactiva desarrollada para la asignación de **Métodos Numéricos**, diseñada para la interpolación y reconstrucción visual del perfil de piezas arqueológicas sobre fotografías digitales. Utiliza **Splines Cúbicos Paramétricos Naturales** parametrizados por longitud de cuerda y resueltos mediante el **Algoritmo de Thomas**.
 
